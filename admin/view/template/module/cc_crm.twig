@@ -1,0 +1,163 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="float-end">
+        <button type="submit" form="form-crm" data-bs-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa-solid fa-save"></i></button>
+        <button type="button" id="btn-log" class="btn btn-info"><i class="fa-solid fa-list"></i> {{ text_log_link }}</button>
+        <a href="{{ back }}" class="btn btn-light"><i class="fa-solid fa-reply"></i></a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ol class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+        <li class="breadcrumb-item"><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+  <div class="container-fluid">
+    <div id="alert-crm"></div>
+    <div id="log-panel" class="mb-3"></div>
+
+    <div class="card">
+      <div class="card-header"><i class="fa-solid fa-pencil"></i> {{ text_edit }}</div>
+      <div class="card-body">
+        <form id="form-crm" action="{{ save }}" method="post">
+          <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item"><a class="nav-link active" href="#tab-general" data-bs-toggle="tab">{{ text_general }}</a></li>
+            <li class="nav-item"><a class="nav-link" href="#tab-targets" data-bs-toggle="tab">{{ text_targets }}</a></li>
+          </ul>
+          <div class="tab-content">
+
+            <div class="tab-pane active" id="tab-general">
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_status }}</label>
+                <div class="col-sm-9"><div class="form-check form-switch form-switch-lg">
+                  <input type="hidden" name="module_cc_crm_status" value="0"/>
+                  <input type="checkbox" name="module_cc_crm_status" value="1" class="form-check-input"{{ status == '1' ? ' checked' : '' }}/>
+                </div></div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_send_on }}</label>
+                <div class="col-sm-9"><select name="module_cc_crm_send_on" class="form-select" style="max-width:280px">
+                  <option value="create"{{ send_on == 'create' ? ' selected' : '' }}>{{ text_on_create }}</option>
+                  <option value="status"{{ send_on == 'status' ? ' selected' : '' }}>{{ text_on_status }}</option>
+                </select><div class="form-text">{{ help_send_on }}</div></div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_trigger }}</label>
+                <div class="col-sm-9"><select name="module_cc_crm_trigger_status" class="form-select" style="max-width:280px">
+                  {% for s in order_statuses %}
+                  <option value="{{ s.order_status_id }}"{{ trigger_status == s.order_status_id ? ' selected' : '' }}>{{ s.name }}</option>
+                  {% endfor %}
+                </select></div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_skip_zero }}</label>
+                <div class="col-sm-9"><div class="form-check form-switch form-switch-lg">
+                  <input type="hidden" name="module_cc_crm_skip_zero" value="0"/>
+                  <input type="checkbox" name="module_cc_crm_skip_zero" value="1" class="form-check-input"{{ skip_zero == '1' ? ' checked' : '' }}/>
+                </div></div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_include_ship }}</label>
+                <div class="col-sm-9"><div class="form-check form-switch form-switch-lg">
+                  <input type="hidden" name="module_cc_crm_include_ship" value="0"/>
+                  <input type="checkbox" name="module_cc_crm_include_ship" value="1" class="form-check-input"{{ include_ship == '1' ? ' checked' : '' }}/>
+                </div></div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_retry }}</label>
+                <div class="col-sm-9"><div class="form-check form-switch form-switch-lg">
+                  <input type="hidden" name="module_cc_crm_retry_enabled" value="0"/>
+                  <input type="checkbox" name="module_cc_crm_retry_enabled" value="1" class="form-check-input"{{ retry_enabled == '1' ? ' checked' : '' }}/>
+                </div></div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_max_attempts }}</label>
+                <div class="col-sm-9"><input type="number" min="1" max="50" name="module_cc_crm_max_attempts" value="{{ max_attempts }}" class="form-control" style="max-width:120px"/></div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_source }}</label>
+                <div class="col-sm-9"><input type="text" name="module_cc_crm_source_label" value="{{ source_label }}" class="form-control" style="max-width:280px"/></div>
+              </div>
+            </div>
+
+            <div class="tab-pane" id="tab-targets">
+              {% for slug, cfg in targets %}
+              <fieldset>
+                <legend>{{ target_labels[slug] }}</legend>
+                <div class="row mb-3">
+                  <label class="col-sm-3 col-form-label">{{ entry_enabled }}</label>
+                  <div class="col-sm-9"><div class="form-check form-switch form-switch-lg">
+                    <input type="hidden" name="module_cc_crm_targets[{{ slug }}][enabled]" value="0"/>
+                    <input type="checkbox" name="module_cc_crm_targets[{{ slug }}][enabled]" value="1" class="form-check-input"{{ cfg.enabled == '1' ? ' checked' : '' }}/>
+                  </div></div>
+                </div>
+                <div class="row mb-3">
+                  <label class="col-sm-3 col-form-label">{{ entry_base_url }}</label>
+                  <div class="col-sm-9"><input type="text" name="module_cc_crm_targets[{{ slug }}][base_url]" value="{{ cfg.base_url }}" class="form-control"/></div>
+                </div>
+                <div class="row mb-3">
+                  <label class="col-sm-3 col-form-label">{{ entry_api_key }}</label>
+                  <div class="col-sm-9">
+                    <input type="password" name="module_cc_crm_targets[{{ slug }}][api_key]" value="" class="form-control" placeholder="{{ cfg.api_key_set ? text_secret_set : '' }}" autocomplete="new-password"/>
+                    <div class="form-text">{{ help_api_key }}</div>
+                  </div>
+                </div>
+                {% if slug == 'keycrm' %}
+                <div class="row mb-3">
+                  <label class="col-sm-3 col-form-label">{{ entry_source_id }}</label>
+                  <div class="col-sm-9"><input type="text" name="module_cc_crm_targets[{{ slug }}][source_id]" value="{{ cfg.source_id }}" class="form-control" style="max-width:200px"/></div>
+                </div>
+                {% endif %}
+                <div class="row mb-3">
+                  <div class="col-sm-9 offset-sm-3">
+                    <button type="button" class="btn btn-outline-primary btn-test" data-slug="{{ slug }}"><i class="fa-solid fa-plug"></i> {{ button_test }}</button>
+                    <span class="test-result ms-2"></span>
+                  </div>
+                </div>
+              </fieldset>
+              {% endfor %}
+            </div>
+
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+document.getElementById('form-crm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var alertBox = document.getElementById('alert-crm');
+  fetch('{{ save }}', { method: 'POST', body: new FormData(this) })
+    .then(function(r){ return r.json(); })
+    .then(function(json){
+      if (json.error) { alertBox.innerHTML = '<div class="alert alert-danger">' + json.error + '</div>'; }
+      else if (json.success) { alertBox.innerHTML = '<div class="alert alert-success">' + json.success + '</div>'; }
+      window.scrollTo(0, 0);
+    });
+});
+
+document.querySelectorAll('.btn-test').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var slug = this.getAttribute('data-slug');
+    var out = this.parentNode.querySelector('.test-result');
+    out.innerHTML = '<span class="text-muted">…</span>';
+    fetch('{{ test }}&target=' + encodeURIComponent(slug))
+      .then(function(r){ return r.json(); })
+      .then(function(json){
+        if (json.ok) { out.innerHTML = '<span class="text-success">{{ text_test_ok }}</span>'; }
+        else { out.innerHTML = '<span class="text-danger">' + (json.error || 'Error') + '</span>'; }
+      });
+  });
+});
+
+document.getElementById('btn-log').addEventListener('click', function(){
+  var panel = document.getElementById('log-panel');
+  fetch('{{ log }}').then(function(r){ return r.text(); }).then(function(html){ panel.innerHTML = html; });
+});
+</script>
+{{ footer }}

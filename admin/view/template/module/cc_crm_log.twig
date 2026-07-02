@@ -1,0 +1,39 @@
+<div class="card">
+  <div class="card-header"><i class="fa-solid fa-list"></i> {{ text_log }}</div>
+  <div class="card-body p-0">
+    {% if rows %}
+    <table class="table table-sm table-hover mb-0">
+      <thead>
+        <tr>
+          <th>{{ column_order }}</th>
+          <th>{{ column_target }}</th>
+          <th>{{ column_status }}</th>
+          <th>{{ column_external }}</th>
+          <th class="text-end">{{ column_attempts }}</th>
+          <th>{{ column_error }}</th>
+          <th>{{ column_updated }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.order_id }}</td>
+          <td>{{ r.target }}</td>
+          <td>
+            {% if r.status == 'completed' %}<span class="badge bg-success">{{ r.status }}</span>
+            {% elseif r.status == 'failed' %}<span class="badge bg-danger">{{ r.status }}</span>
+            {% else %}<span class="badge bg-secondary">{{ r.status }}</span>{% endif %}
+          </td>
+          <td>{{ r.external_id }}</td>
+          <td class="text-end">{{ r.attempts }}</td>
+          <td><small class="text-danger">{{ r.last_error }}</small></td>
+          <td><small>{{ r.updated_at }}</small></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="p-3 text-muted">{{ text_empty }}</div>
+    {% endif %}
+  </div>
+</div>
