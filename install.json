@@ -1,5 +1,5 @@
 {
-  "name": "CatCode KeyCRM Sync",
+  "name": "KeyCRM Sync",
   "description": "Order sync to KeyCRM for OpenCart 4.x — pushes orders on placement / status change, idempotent (no duplicate orders), retry queue via cron, field & payment mapping, encrypted API key, sync journal with request/response log. Auto-creates the KeyCRM source on first order.",
   "version": "1.0.0",
   "author": "CatCode",

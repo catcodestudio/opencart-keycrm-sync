@@ -1,4 +1,4 @@
-# CatCode KeyCRM Sync (OpenCart 4)
+# KeyCRM Sync (OpenCart 4)
 
 Order synchronization from OpenCart 4.x to **KeyCRM**.
 
@@ -12,7 +12,7 @@ Order synchronization from OpenCart 4.x to **KeyCRM**.
 - Sync journal with per-order status and request/response excerpts.
 
 ## Install
-Admin → Extensions → Installer → upload `cc_keycrm_sync.ocmod.zip`, then Extensions → Modules → install **CatCode KeyCRM Sync**. Enter the KeyCRM API key (Settings → General → API key in KeyCRM) and enable the target.
+Admin → Extensions → Installer → upload `cc_keycrm_sync.ocmod.zip`, then Extensions → Modules → install **KeyCRM Sync**. Enter the KeyCRM API key (Settings → General → API key in KeyCRM) and enable the target.
 
 ## Structure
 Repository root is the extension payload (`admin/`, `catalog/`, `system/`, `install.json`). Zip these into `cc_keycrm_sync.ocmod.zip` for the OpenCart installer.

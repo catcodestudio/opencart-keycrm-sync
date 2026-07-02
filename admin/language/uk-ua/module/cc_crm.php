@@ -1,5 +1,5 @@
 <?php
-$_['heading_title']     = 'CatCode KeyCRM Sync';
+$_['heading_title']     = 'KeyCRM Sync';
 
 $_['text_extension']    = 'Розширення';
 $_['text_home']         = 'Головна';
