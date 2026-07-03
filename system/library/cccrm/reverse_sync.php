@@ -155,7 +155,9 @@ class ReverseSync {
 				if ($sku === '' || !isset($offer['quantity'])) {
 					continue;
 				}
-				$qty = (int)$offer['quantity'];
+				// Push the sellable stock: total minus what KeyCRM holds in reserve.
+				// Live item shape: {id, sku, price, quantity, purchased_price, reserve}.
+				$qty = max(0, (int)$offer['quantity'] - (int)($offer['reserve'] ?? 0));
 				$this->db->query("UPDATE `" . DB_PREFIX . "product` SET quantity = " . $qty . "
 					WHERE sku = '" . $this->db->escape($sku) . "' AND quantity <> " . $qty);
 				$summary['stock_updated'] += (int)$this->db->countAffected();
