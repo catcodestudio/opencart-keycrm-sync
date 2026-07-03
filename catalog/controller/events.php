@@ -15,7 +15,7 @@ use Opencart\System\Library\Cccrm\ReverseSync;
 class Events extends \Opencart\System\Engine\Controller {
 
 	/**
-	 * catalog/model/checkout/order/addHistory/after
+	 * catalog/model/checkout/order.addHistory/after
 	 * args: [order_id, order_status_id, comment, notify]
 	 */
 	public function orderHistoryAdded(string &$route, array &$args, mixed &$output): void {

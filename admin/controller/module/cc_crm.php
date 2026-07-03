@@ -266,7 +266,9 @@ class CcCrm extends \Opencart\System\Engine\Controller {
 		$this->model_setting_event->addEvent([
 			'code'        => 'cc_crm_order_history_added',
 			'description' => 'CatCode CRM Sync — push order to CRM on placement / status change',
-			'trigger'     => 'catalog/model/checkout/order/addHistory/after',
+			// OC 4.x fires model events as <route>.<method> (dot before the
+			// method) — with a slash there the event never triggers.
+			'trigger'     => 'catalog/model/checkout/order.addHistory/after',
 			'action'      => 'extension/cc_crm/events.orderHistoryAdded',
 			'status'      => 1,
 			'sort_order'  => 20,

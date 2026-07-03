@@ -206,10 +206,15 @@
 </div>
 
 <script type="text/javascript">
+// Twig html-escapes controller URLs (& -> &amp;), which is fine in href
+// attributes but breaks fetch() targets — the user_token gets lost and
+// OpenCart answers with the login page instead of JSON.
+function ccCrmUrl(s) { return s.replace(/&amp;/g, '&'); }
+
 document.getElementById('form-crm').addEventListener('submit', function(e) {
   e.preventDefault();
   var alertBox = document.getElementById('alert-crm');
-  fetch('{{ save }}', { method: 'POST', body: new FormData(this) })
+  fetch(ccCrmUrl('{{ save }}'), { method: 'POST', body: new FormData(this) })
     .then(function(r){ return r.json(); })
     .then(function(json){
       if (json.error) { alertBox.innerHTML = '<div class="alert alert-danger">' + json.error + '</div>'; }
@@ -223,7 +228,7 @@ document.querySelectorAll('.btn-test').forEach(function(btn){
     var slug = this.getAttribute('data-slug');
     var out = this.parentNode.querySelector('.test-result');
     out.innerHTML = '<span class="text-muted">…</span>';
-    fetch('{{ test }}&target=' + encodeURIComponent(slug))
+    fetch(ccCrmUrl('{{ test }}') + '&target=' + encodeURIComponent(slug))
       .then(function(r){ return r.json(); })
       .then(function(json){
         if (json.ok) { out.innerHTML = '<span class="text-success">{{ text_test_ok }}</span>'; }
@@ -234,7 +239,7 @@ document.querySelectorAll('.btn-test').forEach(function(btn){
 
 document.getElementById('btn-log').addEventListener('click', function(){
   var panel = document.getElementById('log-panel');
-  fetch('{{ log }}').then(function(r){ return r.text(); }).then(function(html){ panel.innerHTML = html; });
+  fetch(ccCrmUrl('{{ log }}')).then(function(r){ return r.text(); }).then(function(html){ panel.innerHTML = html; });
 });
 
 // --- Reverse sync: status mapping UI ---
@@ -287,7 +292,7 @@ document.getElementById('btn-log').addEventListener('click', function(){
     var baseInput = document.querySelector('[name="module_cc_crm_targets[keycrm][base_url]"]');
     if (keyInput)  { fd.append('api_key', keyInput.value); }
     if (baseInput) { fd.append('base_url', baseInput.value); }
-    fetch('{{ statuses }}', { method: 'POST', body: fd })
+    fetch(ccCrmUrl('{{ statuses }}'), { method: 'POST', body: fd })
       .then(function(r){ return r.json(); })
       .then(function(json){
         if (!json.ok) { out.innerHTML = '<span class="text-danger">' + (json.error || 'Error') + '</span>'; return; }
