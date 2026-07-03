@@ -29,6 +29,14 @@ class Settings {
 			'retry_enabled'   => '1',
 			'max_attempts'    => '5',
 			'source_label'    => 'OpenCart',
+
+			// Reverse sync (CRM -> OpenCart), KeyCRM only.
+			'reverse_enabled'    => '0',
+			'reverse_notify'     => '0',   // notify customer on status change
+			'reverse_stock'      => '0',   // pull /offers/stocks into oc_product.quantity
+			'reverse_status_map' => [],    // KeyCRM status_id (string) => OC order_status_id (int), stored serialized (json)
+			'reverse_last_run'   => '',    // UTC 'Y-m-d H:i:s' of the last reverse cron run
+
 			'targets'         => self::targetDefaults(),
 		];
 	}

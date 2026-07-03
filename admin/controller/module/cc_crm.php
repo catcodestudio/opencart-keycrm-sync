@@ -53,6 +53,11 @@ class CcCrm extends \Opencart\System\Engine\Controller {
 		$data['targets'] = $targets;
 		$data['target_labels'] = Registry::labels();
 
+		// Reverse sync is available only for adapters exposing the pull API (KeyCRM).
+		$keycrm = Registry::get('keycrm');
+		$data['reverse_supported']  = $keycrm !== null && method_exists($keycrm, 'fetchOrders');
+		$data['reverse_status_map'] = is_array($all['reverse_status_map']) ? $all['reverse_status_map'] : [];
+
 		$this->load->model('localisation/order_status');
 		$data['order_statuses'] = $this->model_localisation_order_status->getOrderStatuses();
 
@@ -63,6 +68,7 @@ class CcCrm extends \Opencart\System\Engine\Controller {
 		$data['save']       = $this->url->link($this->route . '.save', 'user_token=' . $this->session->data['user_token']);
 		$data['test']       = $this->url->link($this->route . '.test', 'user_token=' . $this->session->data['user_token']);
 		$data['log']        = $this->url->link($this->route . '.log', 'user_token=' . $this->session->data['user_token']);
+		$data['statuses']   = $this->url->link($this->route . '.statuses', 'user_token=' . $this->session->data['user_token']);
 		$data['back']       = $this->url->link('marketplace/extension', 'user_token=' . $this->session->data['user_token'] . '&type=module');
 		$data['user_token'] = $this->session->data['user_token'];
 
@@ -89,6 +95,21 @@ class CcCrm extends \Opencart\System\Engine\Controller {
 			$field = 'module_cc_crm_' . $key;
 			$data[$field] = isset($post[$field]) ? $post[$field] : $default;
 		}
+
+		// Reverse-sync state written by cron, not by the form — keep the stored value.
+		$data['module_cc_crm_reverse_last_run'] = (string)$this->config->get('module_cc_crm_reverse_last_run');
+
+		// Normalize the status-map rows (KeyCRM status_id => OC order_status_id) to a JSON-serialized map.
+		$map  = [];
+		$rows = isset($post['module_cc_crm_reverse_status_map']) && is_array($post['module_cc_crm_reverse_status_map']) ? $post['module_cc_crm_reverse_status_map'] : [];
+		foreach ($rows as $row) {
+			$crm = trim((string)($row['keycrm'] ?? ''));
+			$oc  = (int)($row['oc'] ?? 0);
+			if ($crm !== '' && ctype_digit($crm) && (int)$crm > 0 && $oc > 0) {
+				$map[$crm] = $oc;
+			}
+		}
+		$data['module_cc_crm_reverse_status_map'] = $map;
 
 		// Merge targets: keep existing encrypted secret when the field is left blank.
 		$existing = $this->config->get('module_cc_crm_targets');
@@ -147,6 +168,64 @@ class CcCrm extends \Opencart\System\Engine\Controller {
 		$this->jsonResponse(['ok' => false, 'error' => 'Unknown target']);
 	}
 
+	/**
+	 * AJAX: KeyCRM order statuses for the reverse-sync mapping UI.
+	 * Uses the key typed into the form when present (not yet saved), otherwise
+	 * the stored one.
+	 */
+	public function statuses(): void {
+		$this->load->language($this->route);
+		if (!$this->user->hasPermission('access', $this->route)) {
+			$this->jsonResponse(['ok' => false, 'error' => $this->language->get('error_permission')]);
+			return;
+		}
+
+		$settings = new Settings($this->config);
+		$cfg = $settings->target('keycrm');
+
+		$key = trim((string)($this->request->post['api_key'] ?? ''));
+		if ($key !== '') {
+			$cfg['api_key'] = $key;
+		}
+		$base = trim((string)($this->request->post['base_url'] ?? ''));
+		if ($base !== '') {
+			$cfg['base_url'] = $base;
+		}
+		if (($cfg['api_key'] ?? '') === '') {
+			$this->jsonResponse(['ok' => false, 'error' => 'API key empty']);
+			return;
+		}
+
+		$adapter = Registry::get('keycrm');
+		if (!$adapter || !method_exists($adapter, 'fetchStatuses')) {
+			$this->jsonResponse(['ok' => false, 'error' => 'Unknown target']);
+			return;
+		}
+
+		$statuses = [];
+		$page = 1;
+		do {
+			$res = $adapter->fetchStatuses($cfg, $page);
+			if (empty($res['ok'])) {
+				$this->jsonResponse(['ok' => false, 'error' => (string)$res['error']]);
+				return;
+			}
+			foreach ($res['data'] as $s) {
+				$statuses[] = [
+					'id'               => (int)($s['id'] ?? 0),
+					'name'             => (string)($s['name'] ?? ''),
+					'alias'            => (string)($s['alias'] ?? ''),
+					'group_id'         => (int)($s['group_id'] ?? 0),
+					'is_closing_order' => !empty($s['is_closing_order']),
+				];
+			}
+			$lastPage = (int)($res['last_page'] ?? 1);
+			$page++;
+		} while ($page <= $lastPage && $page <= 10);
+
+		$this->jsonResponse(['ok' => true, 'statuses' => $statuses]);
+	}
+
 	public function log(): void {
 		$this->load->language($this->route);
 		if (!$this->user->hasPermission('access', $this->route)) {
@@ -171,12 +250,16 @@ class CcCrm extends \Opencart\System\Engine\Controller {
 			`last_error` TEXT NULL,
 			`request_excerpt` MEDIUMTEXT NULL,
 			`response_excerpt` MEDIUMTEXT NULL,
+			`tracking_code` VARCHAR(64) DEFAULT NULL,
 			`created_at` DATETIME NOT NULL,
 			`updated_at` DATETIME NOT NULL,
 			PRIMARY KEY (`id`),
 			UNIQUE KEY `order_target` (`order_id`, `target`),
 			KEY `status` (`status`)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;");
+
+		// Upgrade path: installs created before the reverse sync lack the column.
+		try { $this->db->query("ALTER TABLE `{$prefix}cc_crm_sync` ADD COLUMN `tracking_code` VARCHAR(64) DEFAULT NULL"); } catch (\Throwable $e) {}
 
 		$this->load->model('setting/event');
 		$this->model_setting_event->deleteEventByCode('cc_crm_order_history_added');
@@ -192,6 +275,8 @@ class CcCrm extends \Opencart\System\Engine\Controller {
 		$this->load->model('setting/cron');
 		try { $this->model_setting_cron->deleteCronByCode('cc_crm_retry'); } catch (\Throwable $e) {}
 		$this->model_setting_cron->addCron('cc_crm_retry', 'CatCode CRM Sync — retry failed pushes', 'hour', 'extension/cc_crm/cron.retry', true);
+		try { $this->model_setting_cron->deleteCronByCode('cc_crm_reverse'); } catch (\Throwable $e) {}
+		$this->model_setting_cron->addCron('cc_crm_reverse', 'CatCode CRM Sync — pull status/tracking/stock updates from CRM', 'hour', 'extension/cc_crm/cron.reverse', true);
 
 		$this->load->model('user/user_group');
 		try {
@@ -205,6 +290,7 @@ class CcCrm extends \Opencart\System\Engine\Controller {
 		try { $this->model_setting_event->deleteEventByCode('cc_crm_order_history_added'); } catch (\Throwable $e) {}
 		$this->load->model('setting/cron');
 		try { $this->model_setting_cron->deleteCronByCode('cc_crm_retry'); } catch (\Throwable $e) {}
+		try { $this->model_setting_cron->deleteCronByCode('cc_crm_reverse'); } catch (\Throwable $e) {}
 		// Table preserved to keep sync history.
 	}
 }

@@ -26,6 +26,9 @@
           <ul class="nav nav-tabs" role="tablist">
             <li class="nav-item"><a class="nav-link active" href="#tab-general" data-bs-toggle="tab">{{ text_general }}</a></li>
             <li class="nav-item"><a class="nav-link" href="#tab-targets" data-bs-toggle="tab">{{ text_targets }}</a></li>
+            {% if reverse_supported %}
+            <li class="nav-item"><a class="nav-link" href="#tab-reverse" data-bs-toggle="tab">{{ text_reverse }}</a></li>
+            {% endif %}
           </ul>
           <div class="tab-content">
 
@@ -121,6 +124,80 @@
               {% endfor %}
             </div>
 
+            {% if reverse_supported %}
+            <div class="tab-pane" id="tab-reverse">
+              <div class="alert alert-light border">{{ help_reverse }}</div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_reverse_enabled }}</label>
+                <div class="col-sm-9"><div class="form-check form-switch form-switch-lg">
+                  <input type="hidden" name="module_cc_crm_reverse_enabled" value="0"/>
+                  <input type="checkbox" name="module_cc_crm_reverse_enabled" value="1" class="form-check-input"{{ reverse_enabled == '1' ? ' checked' : '' }}/>
+                </div></div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_reverse_notify }}</label>
+                <div class="col-sm-9"><div class="form-check form-switch form-switch-lg">
+                  <input type="hidden" name="module_cc_crm_reverse_notify" value="0"/>
+                  <input type="checkbox" name="module_cc_crm_reverse_notify" value="1" class="form-check-input"{{ reverse_notify == '1' ? ' checked' : '' }}/>
+                </div><div class="form-text">{{ help_reverse_notify }}</div></div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_reverse_stock }}</label>
+                <div class="col-sm-9"><div class="form-check form-switch form-switch-lg">
+                  <input type="hidden" name="module_cc_crm_reverse_stock" value="0"/>
+                  <input type="checkbox" name="module_cc_crm_reverse_stock" value="1" class="form-check-input"{{ reverse_stock == '1' ? ' checked' : '' }}/>
+                </div><div class="form-text">{{ help_reverse_stock }}</div></div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_reverse_last }}</label>
+                <div class="col-sm-9"><span class="form-control-plaintext">{% if reverse_last_run %}{{ reverse_last_run }} UTC{% else %}{{ text_never }}{% endif %}</span></div>
+              </div>
+              <div class="row mb-3">
+                <label class="col-sm-3 col-form-label">{{ entry_reverse_map }}</label>
+                <div class="col-sm-9">
+                  <table class="table table-sm" id="reverse-map" style="max-width:640px">
+                    <thead>
+                      <tr>
+                        <th>{{ column_keycrm_status }}</th>
+                        <th>{{ column_oc_status }}</th>
+                        <th style="width:1%"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for k, v in reverse_status_map %}
+                      <tr>
+                        <td>
+                          <select name="module_cc_crm_reverse_status_map[{{ loop.index0 }}][keycrm]" class="form-select keycrm-status">
+                            <option value="{{ k }}" selected>#{{ k }}</option>
+                          </select>
+                        </td>
+                        <td>
+                          <select name="module_cc_crm_reverse_status_map[{{ loop.index0 }}][oc]" class="form-select">
+                            {% for s in order_statuses %}
+                            <option value="{{ s.order_status_id }}"{{ v == s.order_status_id ? ' selected' : '' }}>{{ s.name }}</option>
+                            {% endfor %}
+                          </select>
+                        </td>
+                        <td><button type="button" class="btn btn-outline-danger btn-map-remove"><i class="fa-solid fa-minus-circle"></i></button></td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colspan="2">
+                          <button type="button" id="btn-load-statuses" class="btn btn-outline-primary"><i class="fa-solid fa-download"></i> {{ button_load_statuses }}</button>
+                          <span id="statuses-result" class="ms-2"></span>
+                        </td>
+                        <td><button type="button" id="btn-map-add" class="btn btn-primary"><i class="fa-solid fa-plus-circle"></i></button></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  <div class="form-text">{{ help_reverse_map }}</div>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
           </div>
         </form>
       </div>
@@ -159,5 +236,68 @@ document.getElementById('btn-log').addEventListener('click', function(){
   var panel = document.getElementById('log-panel');
   fetch('{{ log }}').then(function(r){ return r.text(); }).then(function(html){ panel.innerHTML = html; });
 });
+
+// --- Reverse sync: status mapping UI ---
+(function(){
+  var mapTable = document.getElementById('reverse-map');
+  if (!mapTable) { return; }
+
+  var tbody = mapTable.querySelector('tbody');
+  var rowIndex = {{ reverse_status_map|length }};
+  var keycrmStatuses = [];
+  var ocOptions = '{% for s in order_statuses %}<option value="{{ s.order_status_id }}">{{ s.name|e('js') }}</option>{% endfor %}';
+
+  function keycrmOptions(selected) {
+    if (!keycrmStatuses.length) {
+      return selected !== '' ? '<option value="' + selected + '" selected>#' + selected + '</option>' : '<option value=""></option>';
+    }
+    var html = '<option value=""></option>', found = false;
+    keycrmStatuses.forEach(function(s){
+      var sel = String(s.id) === String(selected);
+      if (sel) { found = true; }
+      html += '<option value="' + s.id + '"' + (sel ? ' selected' : '') + '>' + s.name + ' (#' + s.id + ')</option>';
+    });
+    if (!found && selected !== '') {
+      html += '<option value="' + selected + '" selected>#' + selected + '</option>';
+    }
+    return html;
+  }
+
+  function bindRemove(btn) {
+    btn.addEventListener('click', function(){ this.closest('tr').remove(); });
+  }
+  mapTable.querySelectorAll('.btn-map-remove').forEach(bindRemove);
+
+  document.getElementById('btn-map-add').addEventListener('click', function(){
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><select name="module_cc_crm_reverse_status_map[' + rowIndex + '][keycrm]" class="form-select keycrm-status">' + keycrmOptions('') + '</select></td>' +
+      '<td><select name="module_cc_crm_reverse_status_map[' + rowIndex + '][oc]" class="form-select">' + ocOptions + '</select></td>' +
+      '<td><button type="button" class="btn btn-outline-danger btn-map-remove"><i class="fa-solid fa-minus-circle"></i></button></td>';
+    tbody.appendChild(tr);
+    bindRemove(tr.querySelector('.btn-map-remove'));
+    rowIndex++;
+  });
+
+  document.getElementById('btn-load-statuses').addEventListener('click', function(){
+    var out = document.getElementById('statuses-result');
+    out.innerHTML = '<span class="text-muted">…</span>';
+    var fd = new FormData();
+    var keyInput  = document.querySelector('[name="module_cc_crm_targets[keycrm][api_key]"]');
+    var baseInput = document.querySelector('[name="module_cc_crm_targets[keycrm][base_url]"]');
+    if (keyInput)  { fd.append('api_key', keyInput.value); }
+    if (baseInput) { fd.append('base_url', baseInput.value); }
+    fetch('{{ statuses }}', { method: 'POST', body: fd })
+      .then(function(r){ return r.json(); })
+      .then(function(json){
+        if (!json.ok) { out.innerHTML = '<span class="text-danger">' + (json.error || 'Error') + '</span>'; return; }
+        keycrmStatuses = json.statuses || [];
+        mapTable.querySelectorAll('.keycrm-status').forEach(function(sel){
+          sel.innerHTML = keycrmOptions(sel.value);
+        });
+        out.innerHTML = '<span class="text-success">{{ text_statuses_loaded }} (' + keycrmStatuses.length + ')</span>';
+      });
+  });
+})();
 </script>
 {{ footer }}

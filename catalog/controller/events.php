@@ -5,10 +5,12 @@ require_once DIR_EXTENSION . 'cc_crm/system/library/cccrm/settings.php';
 require_once DIR_EXTENSION . 'cc_crm/system/library/cccrm/logger.php';
 require_once DIR_EXTENSION . 'cc_crm/system/library/cccrm/order_mapper.php';
 require_once DIR_EXTENSION . 'cc_crm/system/library/cccrm/dispatcher.php';
+require_once DIR_EXTENSION . 'cc_crm/system/library/cccrm/reverse_sync.php';
 
 use Opencart\System\Library\Cccrm\Settings;
 use Opencart\System\Library\Cccrm\OrderMapper;
 use Opencart\System\Library\Cccrm\Dispatcher;
+use Opencart\System\Library\Cccrm\ReverseSync;
 
 class Events extends \Opencart\System\Engine\Controller {
 
@@ -17,6 +19,11 @@ class Events extends \Opencart\System\Engine\Controller {
 	 * args: [order_id, order_status_id, comment, notify]
 	 */
 	public function orderHistoryAdded(string &$route, array &$args, mixed &$output): void {
+		// Anti-loop: history written by the reverse sync must never be pushed back.
+		if (ReverseSync::$active) {
+			return;
+		}
+
 		$settings = new Settings($this->config);
 		if ($settings->get('status', '0') !== '1') {
 			return;
