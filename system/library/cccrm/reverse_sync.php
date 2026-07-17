@@ -190,7 +190,7 @@ class ReverseSync {
 		// No journal row (e.g. order pushed by an older install) — check history.
 		$hit = $this->db->query("SELECT COUNT(*) AS c FROM `" . DB_PREFIX . "order_history`
 			WHERE order_id = " . $orderId . "
-			AND comment LIKE '%" . $this->db->escape('ТТН: ' . $code) . "%'")->row;
+			AND comment LIKE '" . $this->db->escape('%ТТН: ' . $code . '%') . "'")->row;
 		return (int)($hit['c'] ?? 0) > 0;
 	}
 

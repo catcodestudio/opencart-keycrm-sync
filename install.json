@@ -1,7 +1,7 @@
 {
   "name": "KeyCRM Sync",
   "description": "Order sync to KeyCRM for OpenCart 4.x — pushes orders on placement / status change, idempotent (no duplicate orders), retry queue via cron, field & payment mapping, encrypted API key, sync journal with request/response log. Auto-creates the KeyCRM source on first order. Reverse sync via cron: order statuses (with admin-configured mapping), tracking codes and optional stock levels pulled from KeyCRM back into OpenCart.",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": "CatCode",
   "link": "https://catcode.com.ua/opencart/crm-sync"
 }
