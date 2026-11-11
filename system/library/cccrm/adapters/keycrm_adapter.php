@@ -55,16 +55,23 @@ class KeycrmAdapter implements AdapterInterface {
 			// shipping_cost inside shipping{} is silently ignored by the API.
 			'shipping_price'  => $order['shipping']['cost'],
 			'shipping'        => [
-				'shipping_service'         => $order['shipping']['method'],
-				'shipping_address_city'    => $order['shipping']['city'],
-				'shipping_secondary_line'  => $order['shipping']['address'],
+				'shipping_service'        => $order['shipping']['method'],
+				'shipping_address_city'   => $order['shipping']['city'],
+				'shipping_secondary_line' => $order['shipping']['address'],
 			],
-			'payments'        => [[
+		];
+
+		// Add payment only when payment method is specified.
+		if (
+			isset($order['payment']['method']) &&
+			trim((string)$order['payment']['method']) !== ''
+		) {
+			$payload['payments'] = [[
 				'payment_method' => $order['payment']['method'],
 				'amount'         => $order['grand_total'],
 				'status'         => 'not_paid',
-			]],
-		];
+			]];
+		}
 
 		// KeyCRM requires either source_id or source_name. Prefer an explicit
 		// source_id; otherwise fall back to a named source (auto-created by
